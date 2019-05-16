@@ -15,7 +15,14 @@ defmodule EchoServer do
   end
 
   defp serve(socket) do
-    socket |> read_line() |> write_line(socket)
+    line = read_line(socket)
+    take_prefix = fn full, prefix ->
+    base = String.length(prefix)
+    String.slice(String.trim(line), base..-1) |>  String.replace_trailing(" HTTP/1.1", "")
+    end
+    file_path = take_prefix.(line, "GET ")
+
+    write_line(get_file(file_path), socket)
     :ok = :gen_tcp.close(socket)
   end
 
@@ -25,10 +32,20 @@ defmodule EchoServer do
   end
 
   defp write_line(line, socket) do
+    Logger.info line
     :gen_tcp.send(socket, line)
+  end
+
+  defp get_file(file_path) do
+    try do
+      File.read! "." <> file_path <> ".html"
+    rescue
+       _ in File.Error -> File.read! "./404.html"
+    end
   end
 
   def main(args \\ []) do
     accept(9999)
   end
+
 end
